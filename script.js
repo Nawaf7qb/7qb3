@@ -15,7 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // بيانات الأسئلة (30 سؤالًا لكل مادة)
     const questions = {
         الرياضيات: [
+            { text: "ما هو ناتج 3 × (4 + 5)؟", answer: "27" },
+            { text: "ما هو ناتج 2² + 3³؟", answer: "31" },
             { text: "ما هو ناتج √64؟", answer: "8" },
+            { text: "ما هو ناتج 5!؟", answer: "120" },
         ],
         العلوم: [
             { text: "ما هو العنصر الكيميائي الذي يرمز له بالرمز O؟", answer: "الأكسجين" },
