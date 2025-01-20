@@ -121,11 +121,19 @@ button {
     border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    margin: 5px;
+    width: 150px;
+    text-align: center;
 }
 
 button:hover {
     background-color: #2980b9;
+    transform: scale(1.05); /* تكبير الزر عند التحويم */
+}
+
+button:active {
+    transform: scale(0.95); /* تصغير الزر عند النقر */
 }
 
 #result-message {
@@ -192,6 +200,7 @@ footer p {
     border-radius: 10px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
+
 .question-image {
     max-width: 100%;
     height: auto;
@@ -204,22 +213,12 @@ footer p {
 .question-image:hover {
     transform: scale(1.05);
 }
-.question-image {
-    max-width: 100%;
-    height: auto;
-    margin-top: 10px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
-}
 
-.question-image:hover {
-    transform: scale(1.05);
-}
 .small-image:hover {
     transform: scale(1.1); /* تكبير الصورة */
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* إضافة ظل */
 }
+
 /* تنسيق الخيارات */
 #options-container {
     display: flex;
@@ -236,26 +235,67 @@ footer p {
     border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
 .option-btn:hover {
     background-color: #2980b9;
+    transform: scale(1.05); /* تكبير الزر عند التحويم */
 }
 
-/* تنسيق زر إظهار الخيارات */
+.option-btn:active {
+    transform: scale(0.95); /* تصغير الزر عند النقر */
+}
+
+/* تنسيق زر إظهار/إخفاء الخيارات */
 #show-options {
-    background-color: #3498db;
+    background-color: #3498db; /* لون أزرق */
     color: #fff;
     border: none;
     padding: 10px 20px;
     border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.2s ease;
     margin-top: 20px;
+    display: inline-block; /* عرض الزر بشكل افتراضي */
 }
 
 #show-options:hover {
-    background-color: #2980b9;
+    background-color: #2980b9; /* لون أزرق داكن عند التحويم */
+    transform: scale(1.05); /* تكبير الزر عند التحويم */
+}
+
+#show-options:active {
+    transform: scale(0.95); /* تصغير الزر عند النقر */
+}
+
+/* تنسيق قسم شرح الموقع والفيديو */
+#site-description {
+    margin-top: 30px;
+}
+
+#site-description h2 {
+    font-size: 24px;
+    color: #2980b9;
+}
+
+.video-instruction {
+    font-size: 18px;
+    color: #2980b9;
+    margin-bottom: 10px;
+}
+
+/* تنسيق الفيديو */
+.video-container {
+    position: relative;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.video-container p {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #2c3e50; /* لون النص */
 }

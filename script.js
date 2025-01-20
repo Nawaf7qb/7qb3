@@ -112,134 +112,164 @@ document.addEventListener('DOMContentLoaded', () => {
         ]
     };
 
-    let currentSubject = null;
-    let currentQuestionIndex = 0;
-    let recordedAnswer = "";
-    let mediaRecorder;
-    let audioChunks = [];
-    let audioUrl = null;
-    let isRecording = false;
-    let stream;
-    let recognition;
-    let isAnswerCorrect = false; // لتتبع إذا كانت الإجابة صحيحة
-    let isOptionsVisible = false; // لتتبع حالة ظهور الخيارات
+let currentSubject = null;
+let currentQuestionIndex = 0;
+let recordedAnswer = "";
+let mediaRecorder;
+let audioChunks = [];
+let audioUrl = null;
+let isRecording = false;
+let stream;
+let recognition;
+let isAnswerCorrect = false; // لتتبع إذا كانت الإجابة صحيحة
+let isOptionsVisible = false; // لتتبع حالة ظهور الخيارات
 
-    // توليد خيارات عشوائية
-    function generateRandomOptions(correctAnswer, subject) {
-        const options = [correctAnswer];
-        const allAnswers = questions[subject].map(q => q.answer);
+// دالة لتحويل الأرقام المكتوبة كأحرف إلى أرقام
+function convertArabicNumbersToDigits(text) {
+    const arabicNumbers = {
+        "صفر": "0",
+        "واحد": "1",
+        "إثنان": "2",
+        "ثلاثه": "3",
+        "اربعه": "4",
+        "خمسه": "5",
+        "سته": "6",
+        "سبعه": "7",
+        "ثمانيه": "8",
+        "تسعه": "9",
+        "عشره": "10"
+    };
 
-        while (options.length < 4) {
-            const randomAnswer = allAnswers[Math.floor(Math.random() * allAnswers.length)];
-            if (!options.includes(randomAnswer)) {
-                options.push(randomAnswer);
-            }
-        }
-
-        return shuffleArray(options);
+    for (const [word, digit] of Object.entries(arabicNumbers)) {
+        text = text.replace(new RegExp(word, "g"), digit);
     }
 
-    // خلط الخيارات عشوائياً
-    function shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
+    return text;
+}
+
+// توليد خيارات عشوائية
+function generateRandomOptions(correctAnswer, subject) {
+    const options = [correctAnswer];
+    const allAnswers = questions[subject].map(q => q.answer);
+
+    while (options.length < 4) {
+        const randomAnswer = allAnswers[Math.floor(Math.random() * allAnswers.length)];
+        if (!options.includes(randomAnswer)) {
+            options.push(randomAnswer);
         }
-        return array;
     }
 
-    // عرض الخيارات
-    function displayOptions(options) {
-        optionsContainer.innerHTML = ""; // مسح الخيارات السابقة
-        options.forEach(option => {
-            const button = document.createElement("button");
-            button.textContent = option;
-            button.addEventListener("click", () => {
-                if (!isAnswerCorrect) { // منع السبام إذا كانت الإجابة صحيحة
-                    if (option === questions[currentSubject][currentQuestionIndex].answer) {
-                        resultMessage.innerText = "إجابة صحيحة!";
-                        resultMessage.style.color = "#2ecc71";
-                        isAnswerCorrect = true; // تم اختيار إجابة صحيحة
-                        optionsContainer.style.display = "none"; // إخفاء الخيارات
-                        setTimeout(() => {
-                            showRandomQuestion(); // تجديد السؤال بعد 3 ثوانٍ
-                            isAnswerCorrect = false; // إعادة تعيين المتغير
-                        }, 3000);
-                    } else {
-                        resultMessage.innerText = "إجابة خاطئة. حاول مرة أخرى.";
-                        resultMessage.style.color = "#e74c3c";
-                    }
+    return shuffleArray(options);
+}
+
+// خلط الخيارات عشوائياً
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+// عرض الخيارات
+function displayOptions(options) {
+    optionsContainer.innerHTML = ""; // مسح الخيارات السابقة
+    options.forEach(option => {
+        const button = document.createElement("button");
+        button.textContent = option;
+        button.addEventListener("click", () => {
+            if (!isAnswerCorrect) { // منع السبام إذا كانت الإجابة صحيحة
+                if (option === questions[currentSubject][currentQuestionIndex].answer) {
+                    resultMessage.innerText = "إجابة صحيحة!";
+                    resultMessage.style.color = "#2ecc71";
+                    isAnswerCorrect = true; // تم اختيار إجابة صحيحة
+                    optionsContainer.style.display = "none"; // إخفاء الخيارات
+                    setTimeout(() => {
+                        showRandomQuestion(); // تجديد السؤال بعد 3 ثوانٍ
+                        isAnswerCorrect = false; // إعادة تعيين المتغير
+                    }, 3000);
+                } else {
+                    resultMessage.innerText = "إجابة خاطئة. حاول مرة أخرى.";
+                    resultMessage.style.color = "#e74c3c";
                 }
-            });
-            optionsContainer.appendChild(button);
-        });
-    }
-
-    // عرض سؤال عشوائي
-    function showRandomQuestion() {
-        if (!questions[currentSubject]) {
-            console.error("المادة غير معرّفة:", currentSubject);
-            return;
-        }
-
-        // اختيار سؤال عشوائي
-        currentQuestionIndex = Math.floor(Math.random() * questions[currentSubject].length);
-        const question = questions[currentSubject][currentQuestionIndex];
-
-        // عرض السؤال
-        questionText.innerText = question.text;
-        resultMessage.innerText = "";
-
-        // إخفاء الخيارات بشكل افتراضي
-        optionsContainer.style.display = "none";
-        isOptionsVisible = false;
-
-        // إخفاء الأزرار غير الضرورية
-        repeatAnswerButton.style.display = 'none';
-        showAnswerButton.style.display = 'none';
-        playAudioButton.style.display = 'none';
-        stopRecordButton.style.display = 'none';
-        recordButton.style.display = 'inline-block';
-    }
-
-    // بدء التسجيل والتحليل
-    async function startRecordingAndAnalysis(correctWord) {
-        console.log("بدء التسجيل...");
-        try {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
             }
-            audioChunks = [];
+        });
+        optionsContainer.appendChild(button);
+    });
+}
 
-            console.log("جاري طلب إذن استخدام الميكروفون...");
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log("تم منح الإذن بنجاح!");
+// عرض سؤال عشوائي
+function showRandomQuestion() {
+    if (!questions[currentSubject]) {
+        console.error("المادة غير معرّفة:", currentSubject);
+        return;
+    }
 
-            mediaRecorder = new MediaRecorder(stream);
+    // اختيار سؤال عشوائي
+    currentQuestionIndex = Math.floor(Math.random() * questions[currentSubject].length);
+    const question = questions[currentSubject][currentQuestionIndex];
 
-            mediaRecorder.ondataavailable = (event) => {
-                audioChunks.push(event.data);
-            };
+    // عرض السؤال
+    questionText.innerText = question.text;
+    resultMessage.innerText = "";
 
-            mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                audioUrl = URL.createObjectURL(audioBlob);
-                audioPlayback.src = audioUrl;
-                audioPlayback.classList.remove("hidden");
-            };
+    // إخفاء الخيارات بشكل افتراضي
+    optionsContainer.style.display = "none";
+    isOptionsVisible = false;
 
-            mediaRecorder.start();
+    // إخفاء الأزرار غير الضرورية
+    repeatAnswerButton.style.display = 'none';
+    showAnswerButton.style.display = 'none';
+    playAudioButton.style.display = 'none';
+    stopRecordButton.style.display = 'none';
+    recordButton.style.display = 'inline-block';
+}
 
-            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            recognition.lang = "ar-SA";
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 3;
+// بدء التسجيل والتحليل
+async function startRecordingAndAnalysis(correctWord) {
+    console.log("بدء التسجيل...");
+    try {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        audioChunks = [];
 
-            recognition.onresult = (event) => {
-                const spokenText = event.results[0][0].transcript;
-                console.log("النطق المسجل:", spokenText);
+        console.log("جاري طلب إذن استخدام الميكروفون...");
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log("تم منح الإذن بنجاح!");
 
-                if (isPronunciationCorrect(spokenText, correctWord)) {
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            audioUrl = URL.createObjectURL(audioBlob);
+            audioPlayback.src = audioUrl;
+            audioPlayback.classList.remove("hidden");
+        };
+
+        mediaRecorder.start();
+
+        recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = "ar-SA";
+        recognition.continuous = true; // يستمر في الاستماع حتى يتم إيقافه يدويًا
+        recognition.interimResults = true; // يعرض النتائج المؤقتة أثناء الكلام
+        recognition.maxAlternatives = 3;
+
+        recognition.onresult = (event) => {
+            const spokenText = event.results[0][0].transcript;
+            const convertedText = convertArabicNumbersToDigits(spokenText); // تحويل الأرقام المكتوبة كأحرف إلى أرقام
+            console.log("النطق المسجل:", convertedText); // عرض النص المحول في الكونسول
+
+            // إيقاف التسجيل بعد ربع ثانية (250 مللي ثانية)
+            setTimeout(() => {
+                stopRecording();
+
+                // تقييم الإجابة بعد انتهاء التسجيل
+                if (isPronunciationCorrect(convertedText, correctWord)) {
                     resultMessage.innerText = "إجابة صحيحة!";
                     resultMessage.style.color = "#2ecc71";
                     isAnswerCorrect = true; // تم تسجيل إجابة صحيحة
@@ -248,165 +278,164 @@ document.addEventListener('DOMContentLoaded', () => {
                     resultMessage.innerText = "إجابة خاطئة. حاول مرة أخرى.";
                     resultMessage.style.color = "#e74c3c";
                 }
+            }, 250); // انتظر ربع ثانية قبل الإيقاف والتقييم
+        };
 
-                stopRecording();
-            };
+        recognition.onerror = (event) => {
+            console.error("خطأ في التعرف على الكلام:", event.error);
+            resultMessage.innerText = "حدث خطأ أثناء التحليل!";
+        };
 
-            recognition.onerror = (event) => {
-                console.error("خطأ في التعرف على الكلام:", event.error);
-                resultMessage.innerText = "حدث خطأ أثناء التحليل!";
-            };
+        recognition.onend = () => {
+            console.log("انتهى التعرف على الكلام.");
+        };
 
-            recognition.onend = () => {
-                console.log("انتهى التعرف على الكلام.");
-            };
+        recognition.start();
 
-            recognition.start();
-
-        } catch (error) {
-            console.error("خطأ في التسجيل:", error);
-            if (error.name === "NotAllowedError") {
-                resultMessage.innerText = "يجب السماح بالوصول إلى الميكروفون!";
-            } else if (error.name === "NotFoundError") {
-                resultMessage.innerText = "الميكروفون غير متصل!";
-            } else {
-                resultMessage.innerText = "حدث خطأ غير متوقع!";
-            }
-        }
-    }
-
-    // إيقاف التسجيل
-    function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-            mediaRecorder.stop();
-            if (recognition) {
-                recognition.stop();
-            }
-            isRecording = false;
-            console.log("تم إيقاف التسجيل!");
-
-            // إظهار الأزرار بعد إيقاف التسجيل
-            playAudioButton.style.display = 'inline-block';
-            repeatAnswerButton.style.display = 'inline-block';
-            showAnswerButton.style.display = 'inline-block';
-            stopRecordButton.style.display = 'none';
-            recordButton.style.display = 'inline-block';
-        }
-    }
-
-    // التحقق من صحة النطق
-    function isPronunciationCorrect(spokenText, correctText) {
-        const cleanedSpokenText = removeTashkeel(spokenText).trim();
-        const cleanedCorrectText = removeTashkeel(correctText).trim();
-
-        if (cleanedCorrectText.length <= 3) {
-            return cleanedSpokenText === cleanedCorrectText;
-        }
-
-        let correctChars = 0;
-        const minLength = Math.min(cleanedSpokenText.length, cleanedCorrectText.length);
-
-        for (let i = 0; i < minLength; i++) {
-            if (cleanedSpokenText[i] === cleanedCorrectText[i]) {
-                correctChars++;
-            }
-        }
-
-        const accuracy = (correctChars / cleanedCorrectText.length) * 100;
-        return accuracy >= 80;
-    }
-
-    // إزالة التشكيل من النص
-    function removeTashkeel(text) {
-        return text.replace(/[\u064B-\u065F\u0610-\u061A]/g, '');
-    }
-
-    // إزالة التاء المربوطة من النص
-    function removeTaaMarbuta(text) {
-        return text.replace(/ة/g, 'ه');
-    }
-
-    // إعادة نطق الإجابة الصحيحة
-    function repeatAnswer(correctAnswer) {
-        const utterance = new SpeechSynthesisUtterance(`الإجابة الصحيحة هي: ${correctAnswer}`);
-        utterance.lang = 'ar-SA';
-        speechSynthesis.speak(utterance);
-    }
-
-    // عرض الإجابة الصحيحة
-    showAnswerButton.addEventListener('click', () => {
-        const correctAnswer = removeTaaMarbuta(questions[currentSubject][currentQuestionIndex].answer);
-        resultMessage.innerText = `الإجابة الصحيحة هي: ${correctAnswer}`;
-        resultMessage.style.color = "#2ecc71";
-    });
-
-    // تشغيل الصوت المسجل
-    playAudioButton.addEventListener('click', () => {
-        if (audioUrl) {
-            const audio = new Audio(audioUrl);
-            audio.play();
+    } catch (error) {
+        console.error("خطأ في التسجيل:", error);
+        if (error.name === "NotAllowedError") {
+            resultMessage.innerText = "يجب السماح بالوصول إلى الميكروفون!";
+        } else if (error.name === "NotFoundError") {
+            resultMessage.innerText = "الميكروفون غير متصل!";
         } else {
-            console.error("لا يوجد صوت مسجل.");
-            resultMessage.innerText = "لا يوجد صوت مسجل.";
-            resultMessage.style.color = "#e74c3c";
+            resultMessage.innerText = "حدث خطأ غير متوقع!";
         }
-    });
+    }
+}
 
-    // إعادة نطق الإجابة الصحيحة
-    repeatAnswerButton.addEventListener('click', () => {
-        const correctAnswer = removeTaaMarbuta(questions[currentSubject][currentQuestionIndex].answer);
-        repeatAnswer(correctAnswer);
-    });
-
-    // تسجيل الإجابة
-    recordButton.addEventListener('click', async () => {
-        if (!questions[currentSubject] || !questions[currentSubject][currentQuestionIndex]) {
-            console.error("السؤال غير معرّف:", currentSubject, currentQuestionIndex);
-            resultMessage.innerText = "السؤال غير معرّف!";
-            resultMessage.style.color = "#e74c3c";
-            return;
+// إيقاف التسجيل
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+        if (recognition) {
+            recognition.stop();
         }
+        isRecording = false;
+        console.log("تم إيقاف التسجيل!");
 
-        await startRecordingAndAnalysis(questions[currentSubject][currentQuestionIndex].answer);
+        // إظهار الأزرار بعد إيقاف التسجيل
+        playAudioButton.style.display = 'inline-block';
+        repeatAnswerButton.style.display = 'inline-block';
+        showAnswerButton.style.display = 'inline-block';
+        stopRecordButton.style.display = 'none';
+        recordButton.style.display = 'inline-block';
+    }
+}
 
-        // تبديل الأزرار
-        recordButton.style.display = 'none';
-        stopRecordButton.style.display = 'inline-block';
-    });
+// التحقق من صحة النطق
+function isPronunciationCorrect(spokenText, correctText) {
+    const cleanedSpokenText = removeTashkeel(spokenText).trim();
+    const cleanedCorrectText = removeTashkeel(correctText).trim();
 
-    // إيقاف التسجيل يدويًا
-    stopRecordButton.addEventListener('click', () => {
-        stopRecording();
-    });
-
-    // إظهار الخيارات عند النقر على زر "إظهار الخيارات"
-    showOptionsButton.addEventListener('click', () => {
-        if (!isOptionsVisible) { // منع السبام
-            const correctAnswer = questions[currentSubject][currentQuestionIndex].answer;
-            const options = generateRandomOptions(correctAnswer, currentSubject);
-            displayOptions(options);
-            optionsContainer.style.display = "block"; // إظهار الخيارات
-            isOptionsVisible = true; // تم عرض الخيارات
-        }
-    });
-
-    // بدء التحدي
-    const urlParams = new URLSearchParams(window.location.search);
-    const subject = urlParams.get('subject');
-    const level = urlParams.get('level');
-
-    if (!subject || !questions[subject]) {
-        console.error("المادة غير معرّفة أو غير موجودة:", subject);
-        alert("المادة غير معرّفة أو غير موجودة!");
-        window.location.href = "index.html"; // إعادة التوجيه إلى الصفحة الرئيسية
-        return; // إيقاف تنفيذ الكود
+    if (cleanedCorrectText.length <= 3) {
+        return cleanedSpokenText === cleanedCorrectText;
     }
 
-    currentSubject = subject;
-    showRandomQuestion();
+    let correctChars = 0;
+    const minLength = Math.min(cleanedSpokenText.length, cleanedCorrectText.length);
 
-    // ربط زر تجديد السؤال بالوظيفة
-    document.getElementById('refresh-question').addEventListener('click', () => {
-        showRandomQuestion();
-    });
+    for (let i = 0; i < minLength; i++) {
+        if (cleanedSpokenText[i] === cleanedCorrectText[i]) {
+            correctChars++;
+        }
+    }
+
+    const accuracy = (correctChars / cleanedCorrectText.length) * 100;
+    return accuracy >= 80;
+}
+
+// إزالة التشكيل من النص
+function removeTashkeel(text) {
+    return text.replace(/[\u064B-\u065F\u0610-\u061A]/g, '');
+}
+
+// إزالة التاء المربوطة من النص
+function removeTaaMarbuta(text) {
+    return text.replace(/ة/g, 'ه');
+}
+
+// إعادة نطق الإجابة الصحيحة
+function repeatAnswer(correctAnswer) {
+    const utterance = new SpeechSynthesisUtterance(`الإجابة الصحيحة هي: ${correctAnswer}`);
+    utterance.lang = 'ar-SA';
+    speechSynthesis.speak(utterance);
+}
+
+// عرض الإجابة الصحيحة
+showAnswerButton.addEventListener('click', () => {
+    const correctAnswer = removeTaaMarbuta(questions[currentSubject][currentQuestionIndex].answer);
+    resultMessage.innerText = `الإجابة الصحيحة هي: ${correctAnswer}`;
+    resultMessage.style.color = "#2ecc71";
+});
+
+// تشغيل الصوت المسجل
+playAudioButton.addEventListener('click', () => {
+    if (audioUrl) {
+        const audio = new Audio(audioUrl);
+        audio.play();
+    } else {
+        console.error("لا يوجد صوت مسجل.");
+        resultMessage.innerText = "لا يوجد صوت مسجل.";
+        resultMessage.style.color = "#e74c3c";
+    }
+});
+
+// إعادة نطق الإجابة الصحيحة
+repeatAnswerButton.addEventListener('click', () => {
+    const correctAnswer = removeTaaMarbuta(questions[currentSubject][currentQuestionIndex].answer);
+    repeatAnswer(correctAnswer);
+});
+
+// تسجيل الإجابة
+recordButton.addEventListener('click', async () => {
+    if (!questions[currentSubject] || !questions[currentSubject][currentQuestionIndex]) {
+        console.error("السؤال غير معرّف:", currentSubject, currentQuestionIndex);
+        resultMessage.innerText = "السؤال غير معرّف!";
+        resultMessage.style.color = "#e74c3c";
+        return;
+    }
+
+    await startRecordingAndAnalysis(questions[currentSubject][currentQuestionIndex].answer);
+
+    // تبديل الأزرار
+    recordButton.style.display = 'none';
+    stopRecordButton.style.display = 'inline-block';
+});
+
+// إيقاف التسجيل يدويًا
+stopRecordButton.addEventListener('click', () => {
+    stopRecording();
+});
+
+// إظهار الخيارات عند النقر على زر "إظهار الخيارات"
+showOptionsButton.addEventListener('click', () => {
+    if (!isOptionsVisible) { // منع السبام
+        const correctAnswer = questions[currentSubject][currentQuestionIndex].answer;
+        const options = generateRandomOptions(correctAnswer, currentSubject);
+        displayOptions(options);
+        optionsContainer.style.display = "block"; // إظهار الخيارات
+        isOptionsVisible = true; // تم عرض الخيارات
+    }
+});
+
+// بدء التحدي
+const urlParams = new URLSearchParams(window.location.search);
+const subject = urlParams.get('subject');
+const level = urlParams.get('level');
+
+if (!subject || !questions[subject]) {
+    console.error("المادة غير معرّفة أو غير موجودة:", subject);
+    alert("المادة غير معرّفة أو غير موجودة!");
+    window.location.href = "index.html"; // إعادة التوجيه إلى الصفحة الرئيسية
+    return; // إيقاف تنفيذ الكود
+}
+
+currentSubject = subject;
+showRandomQuestion();
+
+// ربط زر تجديد السؤال بالوظيفة
+document.getElementById('refresh-question').addEventListener('click', () => {
+    showRandomQuestion();
+});
 });
